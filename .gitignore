@@ -1,0 +1,5 @@
+*/
+*.xlsx
+*.xlsm
+!excel2gtfsTemplate.xlsx
+!excel2gtfsTemplate.xlsm
