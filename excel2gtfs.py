@@ -1,6 +1,6 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.0.7
-(c) Jeff Kessler, 2021-12-12-1345
+Excel2GTFS v0.0.8
+(c) Jeff Kessler, 2021-12-12-1620
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
@@ -9,6 +9,7 @@ Excel2GTFS v0.0.7
 0.0.5  Post-midnight trip support & config sheets
 0.0.6  Adds feed info support and attribution
 0.0.7  Converts to a function for variable filename operation
+0.0.8  Suppresses openpyxl warnings
 ------------------------------------------------------------------"""
 
 import openpyxl
@@ -16,6 +17,10 @@ import csv
 import os
 import datetime
 import sys
+import warnings
+
+# Suppress openpyxl warnings
+warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 
 
 def excel2gtfs(filename=None):
@@ -146,8 +151,6 @@ def excel2gtfs(filename=None):
                 writer.writerows(gtfs_entries[key])
 
 
-
 if __name__=="__main__":
     filepath = input("Enter the filepath for excel2gtfs conversion:\n> ") if len(sys.argv) < 2 else sys.argv[1]
     excel2gtfs(filepath)
-
