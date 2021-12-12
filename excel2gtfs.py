@@ -1,12 +1,13 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.0.5
-(c) Jeff Kessler, 2021-12-12-1140
+Excel2GTFS v0.0.6
+(c) Jeff Kessler, 2021-12-12-1335
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
 0.0.3  Support for calendar dates and overrides
 0.0.4  GTFS specification conformity adjustments
 0.0.5  Post-midnight trip support & config sheets
+0.0.6  Adds feed info support and attribution
 ------------------------------------------------------------------"""
 
 import openpyxl
@@ -14,10 +15,10 @@ import csv
 import os
 import datetime
 
-wb = openpyxl.load_workbook(filename="ExcelGTFS.xlsx", data_only=True)
+wb = openpyxl.load_workbook(filename="ExcelGTFS.xlsm", data_only=True)
 
 # Identify applicable sheets
-config_sheets = {"Agency", "Routes", "Stops", "Fare Rules", "Fare Attributes", "Shapes", "Calendar", "Calendar Dates"}
+config_sheets = {"Agency", "Routes", "Stops", "Fare Rules", "Fare Attributes", "Shapes", "Calendar", "Calendar Dates", "Feed Info"}
 skip_sheets = {"Settings & Checks"}
 services = set(wb.sheetnames) - config_sheets - skip_sheets
 config_sheets = config_sheets.intersection(wb.sheetnames) - skip_sheets
@@ -62,6 +63,10 @@ for sheet_name in config_sheets:
         # Covert Calendar Dates back to List vs Dict
         data = [list(calendar_dates[0])] + [[row[key] for key in list(calendar_dates[0])] for row in calendar_dates[1:]]
 
+    # Append excel2gtfs Attribution
+    if sheet_name == "Feed Info" and data[1:]:
+        for row in data[1:]:
+            row[data[0].index("feed_publisher_name")] += " (Created via the excel2gtfs tool)"
 
     # Save GTFS Configuration File
     with open(f'{fp}/{sheet_name.lower().replace(" ", "_")}.txt', "w") as file:
