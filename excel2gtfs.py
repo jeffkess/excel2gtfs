@@ -1,11 +1,12 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.0.4
-(c) Jeff Kessler, 2021-12-12-1135
+Excel2GTFS v0.0.5
+(c) Jeff Kessler, 2021-12-12-1140
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
 0.0.3  Support for calendar dates and overrides
 0.0.4  GTFS specification conformity adjustments
+0.0.5  Post-midnight trip support & config sheets
 ------------------------------------------------------------------"""
 
 import openpyxl
@@ -16,9 +17,10 @@ import datetime
 wb = openpyxl.load_workbook(filename="ExcelGTFS.xlsx", data_only=True)
 
 # Identify applicable sheets
-config_sheets = {"Agency", "Routes", "Stops", "Fare Rules", "Fares", "Shapes", "Calendar", "Calendar Overrides"}
-services = set(wb.sheetnames) - config_sheets
-config_sheets = config_sheets.intersection(wb.sheetnames)
+config_sheets = {"Agency", "Routes", "Stops", "Fare Rules", "Fare Attributes", "Shapes", "Calendar", "Calendar Dates"}
+skip_sheets = {"Settings & Checks"}
+services = set(wb.sheetnames) - config_sheets - skip_sheets
+config_sheets = config_sheets.intersection(wb.sheetnames) - skip_sheets
 
 # Create Output Directory
 fp = "Excel2GTFS Output Created " + datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S")
@@ -84,7 +86,7 @@ for service in services:
     for trip in svc_trip_dicts:
 
         # Identify Stops and Define trip_id by Origin and Departure Time
-        trip_stop_times = sorted([(key, val.strftime("%H:%M:%S")) for key, val in trip.items() if key not in special_keys and val], key=lambda x: x[-1])
+        trip_stop_times = sorted([(key, (str(val.day*24 + val.hour) if type(val)==datetime.datetime else val.strftime("%H")) + val.strftime(":%M:%S")) for key, val in trip.items() if key not in special_keys and val], key=lambda x: x[-1])
         trip_id = "-".join(str(item) for item in [service, *trip_stop_times[0]])
 
         # Append trips.txt Entries
