@@ -1,25 +1,26 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.0.2
-(c) Jeff Kessler, 2021-12-12-0950
+Excel2GTFS v0.0.3
+(c) Jeff Kessler, 2021-12-12-1050
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
+0.0.3  Support for calendar dates and overrides
 ------------------------------------------------------------------"""
 
 import openpyxl
 import csv
 import os
-import time
+import datetime
 
 wb = openpyxl.load_workbook(filename="ExcelGTFS.xlsx", data_only=True)
 
 # Identify applicable sheets
-config_sheets = {"Agency", "Routes", "Stops", "Fare Rules", "Fares", "Calendar", "Calendar Dates", "Shapes"}
+config_sheets = {"Agency", "Routes", "Stops", "Fare Rules", "Fares", "Shapes", "Calendar", "Calendar Overrides"}
 services = set(wb.sheetnames) - config_sheets
 config_sheets = config_sheets.intersection(wb.sheetnames)
 
 # Create Output Directory
-fp = "Excel2GTFS Output Created " + time.strftime("%Y-%m-%d-%H%M%S")
+fp = "Excel2GTFS Output Created " + datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S")
 os.makedirs(fp)
 
 
@@ -29,9 +30,40 @@ os.makedirs(fp)
 
 for sheet_name in config_sheets:
 
+    # Parse Dates in GTFS Format
+    data = wb[sheet_name].values
+    data = [[(val.strftime("%Y%m%d") if type(val)==datetime.datetime else val) for val in row] for row in data]
+
+    # Process Calendar Overrides
+    if sheet_name == "Calendar Overrides" and data[1:]:
+
+        override_dates = {}
+        calendar_dates = []
+
+        # Process Override Entries and Extract Type 3s
+        for row in data[1:]:
+
+            # Convert to List of Dicts
+            row = {data[0][index]: val for index, val in enumerate(row)}
+
+            # Extract Type 3s or Add Generic Calendar Dates
+            if str(row["exception_type"])=="3":
+                override_dates[row["date"]].append(row["service_id"]) if row["date"] in override_dates else override_dates.update({row["date"]: [row["service_id"]]})
+            else:
+                calendar_dates.append(row)
+
+        # Covert Override Entries to Type 1/2s
+        for date, svcs in override_dates.items():
+            [calendar_dates.append({"service_id": svc, "date": date, "exception_type": ("1" if svc in svcs else "2")}) for svc in services]
+
+        # Covert Calendar Dates back to List vs Dict
+        data = [list(calendar_dates[0])] + [[row[key] for key in list(calendar_dates[0])] for row in calendar_dates[1:]]
+
+
+    # Save GTFS Configuration File
     with open(f'{fp}/{sheet_name.lower().replace(" ", "_")}.csv', "w") as file:
         writer = csv.writer(file)
-        writer.writerows([row for row in wb[sheet_name].values])
+        writer.writerows(data)
 
 
 # ------------------------------------------------------------------------------
