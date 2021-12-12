@@ -1,10 +1,11 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.0.3
-(c) Jeff Kessler, 2021-12-12-1050
+Excel2GTFS v0.0.4
+(c) Jeff Kessler, 2021-12-12-1135
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
 0.0.3  Support for calendar dates and overrides
+0.0.4  GTFS specification conformity adjustments
 ------------------------------------------------------------------"""
 
 import openpyxl
@@ -35,7 +36,7 @@ for sheet_name in config_sheets:
     data = [[(val.strftime("%Y%m%d") if type(val)==datetime.datetime else val) for val in row] for row in data]
 
     # Process Calendar Overrides
-    if sheet_name == "Calendar Overrides" and data[1:]:
+    if sheet_name == "Calendar Dates" and data[1:]:
 
         override_dates = {}
         calendar_dates = []
@@ -61,7 +62,7 @@ for sheet_name in config_sheets:
 
 
     # Save GTFS Configuration File
-    with open(f'{fp}/{sheet_name.lower().replace(" ", "_")}.csv', "w") as file:
+    with open(f'{fp}/{sheet_name.lower().replace(" ", "_")}.txt', "w") as file:
         writer = csv.writer(file)
         writer.writerows(data)
 
@@ -88,6 +89,7 @@ for service in services:
 
         # Append trips.txt Entries
         gtfs_entries["trips"].append({
+            "service_id": service,
             "trip_id": trip_id,
             "route_id": trip.get("route_id"),
             "direction_id": trip.get("direction_id"),
@@ -124,7 +126,7 @@ for service in services:
 
 for key in gtfs_entries:
     if gtfs_entries[key]:
-        with open(f'{fp}/{key}.csv', "w") as file:
+        with open(f'{fp}/{key}.txt', "w") as file:
             writer = csv.DictWriter(file, fieldnames=list(gtfs_entries[key][0]))
             writer.writeheader()
             writer.writerows(gtfs_entries[key])
