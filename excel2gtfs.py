@@ -1,6 +1,6 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.0.8
-(c) Jeff Kessler, 2021-12-12-1620
+Excel2GTFS v0.1
+(c) Jeff Kessler, 2023-03-04-1025
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
@@ -10,6 +10,7 @@ Excel2GTFS v0.0.8
 0.0.6  Adds feed info support and attribution
 0.0.7  Converts to a function for variable filename operation
 0.0.8  Suppresses openpyxl warnings
+0.1.0  Adds support for trip_short_names; trip error handling
 ------------------------------------------------------------------"""
 
 import openpyxl
@@ -91,7 +92,7 @@ def excel2gtfs(filename=None):
     # ------------------------------------------------------------------------------
 
     # Initialize Services
-    special_keys = ["route_id", "direction_id", "shape_id", "headsign", "wheelchair_accessible", "bikes_allowed", "Then Every", "Until"]
+    special_keys = ["route_id", "direction_id", "trip_short_name", "shape_id", "headsign", "wheelchair_accessible", "bikes_allowed", "Then Every", "Until"]
     gtfs_entries = {"trips": [], "stop_times": [], "frequencies": []}
 
     # Process Schedule Sheets
@@ -103,8 +104,11 @@ def excel2gtfs(filename=None):
         for trip in svc_trip_dicts:
 
             # Identify Stops and Define trip_id by Origin and Departure Time
-            trip_stop_times = sorted([(key, (str(val.day*24 + val.hour) if type(val)==datetime.datetime else val.strftime("%H")) + val.strftime(":%M:%S")) for key, val in trip.items() if key not in special_keys and val], key=lambda x: x[-1])
-            trip_id = "-".join(str(item) for item in [service, *trip_stop_times[0]])
+            try:
+                trip_stop_times = sorted([(key, (str(val.day*24 + val.hour) if type(val)==datetime.datetime else val.strftime("%H")) + val.strftime(":%M:%S")) for key, val in trip.items() if key not in special_keys and val], key=lambda x: x[-1])
+            except:
+                print(f'Error converting trip:\n{trip}')
+            trip_id = "-".join(str(item) for item in [service, *([trip.get("trip_short_name", "")] if trip.get("trip_short_name", "") else trip_stop_times[0])])
 
             # Append trips.txt Entries
             gtfs_entries["trips"].append({
@@ -113,6 +117,7 @@ def excel2gtfs(filename=None):
                 "route_id": trip.get("route_id"),
                 "direction_id": trip.get("direction_id"),
                 "shape_id": trip.get("shape_id", ""),
+                "trip_short_name": trip.get("trip_short_name", ""),
                 "trip_headsign": trip.get("headsign", ""),
                 "wheelchair_accessible": trip.get("wheelchair_accessible", ""),
                 "bikes_allowed": trip.get("bikes_allowed", ""),
