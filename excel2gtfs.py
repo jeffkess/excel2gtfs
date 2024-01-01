@@ -1,6 +1,6 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.1
-(c) Jeff Kessler, 2023-03-04-1025
+Excel2GTFS v0.1.1
+(c) Jeff Kessler, 2024-01-01-1430
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
@@ -11,6 +11,7 @@ Excel2GTFS v0.1
 0.0.7  Converts to a function for variable filename operation
 0.0.8  Suppresses openpyxl warnings
 0.1.0  Adds support for trip_short_names; trip error handling
+0.1.1  Expanded post-midnight support depending on field type
 ------------------------------------------------------------------"""
 
 import openpyxl
@@ -105,7 +106,7 @@ def excel2gtfs(filename=None):
 
             # Identify Stops and Define trip_id by Origin and Departure Time
             try:
-                trip_stop_times = sorted([(key, (str(val.day*24 + val.hour) if type(val)==datetime.datetime else val.strftime("%H")) + val.strftime(":%M:%S")) for key, val in trip.items() if key not in special_keys and val], key=lambda x: x[-1])
+                trip_stop_times = sorted([(key, (f'{val.total_seconds()//3600:02.0f}:{val.total_seconds()%3600//60:02.0f}:{val.total_seconds()%3600%60:02.0f}' if type(val)==datetime.timedelta else (str(val.day*24 + val.hour) if type(val)==datetime.datetime else val.strftime("%H")) + val.strftime(":%M:%S"))  ) for key, val in trip.items() if key not in special_keys and val], key=lambda x: x[-1])
             except:
                 print(f'Error converting trip:\n{trip}')
             trip_id = "-".join(str(item) for item in [service, *([trip.get("trip_short_name", "")] if trip.get("trip_short_name", "") else trip_stop_times[0])])
