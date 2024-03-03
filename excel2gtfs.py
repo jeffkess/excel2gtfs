@@ -1,6 +1,6 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.2
-(c) Jeff Kessler, 2024-03-03-0905
+Excel2GTFS v0.2.1
+(c) Jeff Kessler, 2024-03-03-0920
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
@@ -15,6 +15,7 @@ Excel2GTFS v0.2
 0.1.2  Adds block_id support, option to skip spreadsheets
 0.2.0  Supports routes serving the same stop twice and
        simultaneous departures from the same origin (in trip_ids)
+0.2.1  Prevents exporting of empty files
 ------------------------------------------------------------------"""
 
 import openpyxl
@@ -65,6 +66,10 @@ def excel2gtfs(filename=None):
             # Process Override Entries and Extract Type 3s
             for row in data[1:]:
 
+                # Skip blank rows
+                if not any(row):
+                    continue
+
                 # Convert to List of Dicts
                 row = {data[0][index]: val for index, val in enumerate(row)}
 
@@ -79,17 +84,18 @@ def excel2gtfs(filename=None):
                 [calendar_dates.append({"service_id": svc, "date": date, "exception_type": ("1" if svc in svcs else "2")}) for svc in services]
 
             # Covert Calendar Dates back to List vs Dict
-            data = [list(calendar_dates[0])] + [[row[key] for key in list(calendar_dates[0])] for row in calendar_dates[1:]]
+            data = [list(calendar_dates[0])] + [[row[key] for key in list(calendar_dates[0])] for row in calendar_dates[1:]] if calendar_dates else []
 
         # Append excel2gtfs Attribution
         if sheet_name == "Feed Info" and data[1:]:
             for row in data[1:]:
                 row[data[0].index("feed_publisher_name")] += " (Created via the excel2gtfs tool)"
 
-        # Save GTFS Configuration File
-        with open(f'{fp}/{sheet_name.lower().replace(" ", "_")}.txt', "w") as file:
-            writer = csv.writer(file)
-            writer.writerows(data)
+        # Save GTFS Configuration File if data
+        if len(data) > 1:
+            with open(f'{fp}/{sheet_name.lower().replace(" ", "_")}.txt', "w") as file:
+                writer = csv.writer(file)
+                writer.writerows(data)
 
 
     # ------------------------------------------------------------------------------
