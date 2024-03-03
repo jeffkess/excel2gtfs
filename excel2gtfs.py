@@ -1,6 +1,6 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.1.2
-(c) Jeff Kessler, 2024-03-03-0825
+Excel2GTFS v0.2
+(c) Jeff Kessler, 2024-03-03-0905
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
@@ -13,6 +13,8 @@ Excel2GTFS v0.1.2
 0.1.0  Adds support for trip_short_names; trip error handling
 0.1.1  Expanded post-midnight support depending on field type
 0.1.2  Adds block_id support, option to skip spreadsheets
+0.2.0  Supports routes serving the same stop twice and
+       simultaneous departures from the same origin (in trip_ids)
 ------------------------------------------------------------------"""
 
 import openpyxl
@@ -101,17 +103,30 @@ def excel2gtfs(filename=None):
     # Process Schedule Sheets
     for service in services:
 
+        # Load trips on the given service
         svc_trips = list(wb[service].values)
-        svc_trip_dicts = [{svc_trips[1][index]: val for index, val in enumerate(row)} for row in svc_trips[2:] if any(row)]
+        svc_trips = [[(svc_trips[1][index], val) for index, val in enumerate(row)] for row in svc_trips[2:] if any(row)]
 
-        for trip in svc_trip_dicts:
+        # Track trip_ids to prevent duplicates where two depart at the same time
+        trip_ids = []
 
-            # Identify Stops and Define trip_id by Origin and Departure Time
+        for trip in svc_trips:
+
+            # Convert times to list and data to dictionary (per special_keys)
+            trip_stop_times = [(key, val) for key, val in trip if key not in special_keys and val]
+            trip = {key: val for key, val in trip if key in special_keys}
+
+            # Parse times from excel into proper format
             try:
-                trip_stop_times = sorted([(key, (f'{val.total_seconds()//3600:02.0f}:{val.total_seconds()%3600//60:02.0f}:{val.total_seconds()%3600%60:02.0f}' if type(val)==datetime.timedelta else (str(val.day*24 + val.hour) if type(val)==datetime.datetime else val.strftime("%H")) + val.strftime(":%M:%S"))  ) for key, val in trip.items() if key not in special_keys and val], key=lambda x: x[-1])
+                trip_stop_times = sorted([(key, (f'{val.total_seconds()//3600:02.0f}:{val.total_seconds()%3600//60:02.0f}:{val.total_seconds()%3600%60:02.0f}' if type(val)==datetime.timedelta else (str(val.day*24 + val.hour) if type(val)==datetime.datetime else val.strftime("%H")) + val.strftime(":%M:%S"))  ) for key, val in trip_stop_times], key=lambda x: x[-1])
             except:
                 print(f'Error converting trip:\n{trip}')
+
+            # Define trip_id and prevent duplicates
             trip_id = "-".join(str(item) for item in [service, *([trip.get("trip_short_name", "")] if trip.get("trip_short_name", "") else trip_stop_times[0])])
+            while trip_id in trip_ids:
+                trip_id += "+"
+            trip_ids.append(trip_id)
 
             # Append trips.txt Entries
             gtfs_entries["trips"].append({
