@@ -1,6 +1,6 @@
 """"------------------------------------------------------------------
-Excel2GTFS v0.1.1
-(c) Jeff Kessler, 2024-01-01-1430
+Excel2GTFS v0.1.2
+(c) Jeff Kessler, 2024-03-03-0825
 
 0.0.1  Initial Commit
 0.0.2  Schedule data processing
@@ -12,6 +12,7 @@ Excel2GTFS v0.1.1
 0.0.8  Suppresses openpyxl warnings
 0.1.0  Adds support for trip_short_names; trip error handling
 0.1.1  Expanded post-midnight support depending on field type
+0.1.2  Adds block_id support, option to skip spreadsheets
 ------------------------------------------------------------------"""
 
 import openpyxl
@@ -35,6 +36,7 @@ def excel2gtfs(filename=None):
     config_sheets = {"Agency", "Routes", "Stops", "Fare Rules", "Fare Attributes", "Shapes", "Calendar", "Calendar Dates", "Feed Info"}
     skip_sheets = {"Settings & Checks"}
     services = set(wb.sheetnames) - config_sheets - skip_sheets
+    services = [row for row in services if row[:5] != "SKIP-"]
     config_sheets = config_sheets.intersection(wb.sheetnames) - skip_sheets
 
     # Create Output Directory
@@ -93,7 +95,7 @@ def excel2gtfs(filename=None):
     # ------------------------------------------------------------------------------
 
     # Initialize Services
-    special_keys = ["route_id", "direction_id", "trip_short_name", "shape_id", "headsign", "wheelchair_accessible", "bikes_allowed", "Then Every", "Until"]
+    special_keys = ["route_id", "direction_id", "trip_short_name", "shape_id", "headsign", "wheelchair_accessible", "bikes_allowed", "block_id", "Then Every", "Until"]
     gtfs_entries = {"trips": [], "stop_times": [], "frequencies": []}
 
     # Process Schedule Sheets
@@ -122,6 +124,7 @@ def excel2gtfs(filename=None):
                 "trip_headsign": trip.get("headsign", ""),
                 "wheelchair_accessible": trip.get("wheelchair_accessible", ""),
                 "bikes_allowed": trip.get("bikes_allowed", ""),
+                "block_id": trip.get("block_id", ""),
             })
 
             # Append stop_time.txt Entries
