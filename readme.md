@@ -67,11 +67,15 @@ The following values represent the supported trip-information columns:
 - `route_id`: The route being operated by the row's trip.
 - `direction_id`: The direction indicator for the trip. Typically `1` represents "inbound" trips, and `0` represents "outbound" trips.
 - `shape_id`: An identifier in the Shapes tab referencing the GPS path of the given trip. Leave blank if none defined.
+- `block_id`: The block identifier for the trip, used to link trips in a sequence into a single block. Leave blank if none defined.
+- `trip_short_name`: A human-readable identifier for a trip; generally used to represent a train number or equivalent value. Leave blank if none defined.
 - `headsign`: The "headsign" of the trip, effectively what would be displayed on the front of the trip's vehicle.
 - `wheelchair_accessible`: `1` for a trip operating with an accessible vehicle, and `2` for an inaccessible vehicle. (NOTE: This relates only to the vehicle; wheelchair-accessible *stops* are indicated as such in the stops tab.)
 - `bikes_allowed`: `1` for a trip that permits bikes, and `2` for one that does not.
 
 All other columns represent a stop, with the row values indicating the time at which the vehicle serves that stop.
+
+As of version 0.2, trips that serve the same stop twice (e.g. routes that loop for a portion of their trip) are supported in the feed. Likewise, having two trips departing the same location at the same time on the same service_id without a distinct `trip_short_name` is automatically supported.
 
 **IMPORTANT**: The orange editable values in Row 2 reflect the stop_id values defined in the stops tab. The diagonal value above indicates the stop_name associated with that stop_id where a match is found. If a match isn't found, the export will NOT be successful!
 
